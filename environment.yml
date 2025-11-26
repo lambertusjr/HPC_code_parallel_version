@@ -1,0 +1,30 @@
+name: gnn-fraud-env
+channels:
+  - pytorch
+  - pyg
+  - conda-forge
+  - defaults
+dependencies:
+  # Core Python
+  - python=3.10
+
+  # PyTorch and GPU Support (as implied by your code)
+  - pytorch
+  - pytorch-cuda=11.8  # Specific CUDA version, adjust if needed
+
+  # PyTorch Geometric (Graph Neural Networks)
+  - pyg
+
+  # Machine Learning & Data Science
+  - numpy
+  - pandas
+  - scikit-learn
+  - xgboost
+  - torchmetrics
+
+  # Hyperparameter Optimization
+  - optuna
+  - sqlite  # For Optuna's storage backend (sqlite:///...db)
+
+  # Utilities
+  - tqdm

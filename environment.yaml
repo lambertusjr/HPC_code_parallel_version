@@ -1,0 +1,61 @@
+name: RP_env
+channels:
+  - pyg
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  # --- Core Data Science ---
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - networkx
+  - sympy
+  - matplotlib-inline
+  
+  # --- Gradient Boosting ---
+  - xgboost
+  - optuna
+  
+  # --- Utilities ---
+  - sqlalchemy
+  - alembic
+  - tqdm
+  - colorlog
+  - pyyaml
+  - pyzmq
+  - psutil
+  - joblib
+  
+  # --- Jupyter/Interactive ---
+  - ipykernel
+  - ipython
+  - jupyter_core
+  - jupyter_client
+  
+  # --- PyTorch Stack (CUDA 12.1) ---
+  # Installing via Conda is much more stable for HPC than pip
+  - pytorch=2.5.1
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.1
+  - torchmetrics
+  - lightning
+  
+  # --- PyTorch Geometric Stack ---
+  # The 'pyg' channel handles the complex scatter/sparse dependencies automatically
+  - pyg
+  - pytorch-scatter
+  - pytorch-sparse
+  - pytorch-cluster
+  - pytorch-spline-conv
+  
+  # --- Pip Specifics ---
+  - pip:
+    - pure_eval
+    - stack_data
+    # Add any other specific pip-only packages here if needed
