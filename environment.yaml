@@ -39,7 +39,7 @@ dependencies:
   
   # --- PyTorch Stack (CUDA 12.1) ---
   # Installing via Conda is much more stable for HPC than pip
-  - pytorch=2.5.1
+  - pytorch=2.4.1
   - torchvision
   - torchaudio
   - pytorch-cuda=12.1
