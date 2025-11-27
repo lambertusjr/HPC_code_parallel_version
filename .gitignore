@@ -1,0 +1,119 @@
+# --- Data and model artifacts ---
+*.pt
+*.csv
+data/
+datasets/
+outputs/
+results/
+checkpoints/
+models/
+runs/
+
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- C extensions built for Python ---
+*.so
+
+# --- Distribution / packaging ---
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- PyInstaller ---
+*.manifest
+*.spec
+
+# --- Installer logs ---
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Unit test / coverage reports ---
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# --- Type checkers / linters ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+.jupyter/
+
+# --- IPython ---
+profile_default/
+ipython_config.py
+
+# --- PEP 582 local packages ---
+__pypackages__/
+
+# --- Environments ---
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+conda/
+.condarc
+.envrc
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+.spyproject
+.ropeproject
+
+# --- Logs ---
+*.log
+log/
+logs/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Temporary / backup files ---
+*.bak
+*.swp
+*~
+
+# --- HPC job scheduler outputs (Slurm, common) ---
+slurm-*.out
+slurm-*.err
