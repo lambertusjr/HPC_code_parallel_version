@@ -117,3 +117,4 @@ Desktop.ini
 # --- HPC job scheduler outputs (Slurm, common) ---
 slurm-*.out
 slurm-*.err
+.DS_Store

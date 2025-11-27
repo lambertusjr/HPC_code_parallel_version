@@ -26,27 +26,40 @@ if [ ! -f "environment.yaml" ]; then
     exit 1
 fi
 
+# 4. Check if the binary exists on the login node (Pre-req check)
+if [ ! -f "bin/micromamba" ]; then
+    echo ">>> ERROR: bin/micromamba not found in $PBS_O_WORKDIR"
+    echo ">>> Please run the curl download command on the login node first."
+    exit 1
+fi
+
 TMP="/scratch-small-local/${PBS_JOBID//./-}"
 echo ">>> Creating TMP directory: $TMP"
 mkdir -p "$TMP"
 
-echo ">>> STEP 1: Downloading Micromamba..."
-curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvjf - bin/micromamba
+echo ">>> STEP 1: Copying Micromamba to Scratch..."
+# Copy the binary from the submit dir to the compute node scratch
+# This prevents network issues and speeds up execution
+cp "$PBS_O_WORKDIR/bin/micromamba" "$TMP/micromamba"
+chmod +x "$TMP/micromamba"
 
-# Debug: Check if binary actually exists after download
-if [ ! -f "./bin/micromamba" ]; then
-    echo ">>> ERROR: bin/micromamba not found after extraction."
-    ls -R bin/
+# Define the path to the executable in TMP
+MAMBA_EXE="$TMP/micromamba"
+
+# Debug: Check if binary actually exists in TMP
+if [ ! -f "$MAMBA_EXE" ]; then
+    echo ">>> ERROR: Micromamba binary not found in TMP after copy."
+    ls -l "$TMP"
     exit 1
 fi
 
-export MAMBA_ROOT_PREFIX="$TMP/micromamba"
+export MAMBA_ROOT_PREFIX="$TMP/micromamba_root"
 
 echo ">>> STEP 2: Creating Target Environment..."
-./bin/micromamba create -y --no-rc -p "$TMP/RP_env" -f environment.yaml
+$MAMBA_EXE create -y --no-rc -p "$TMP/RP_env" -f environment.yaml
 
 echo ">>> STEP 3: Creating Packer Environment..."
-./bin/micromamba create -y --no-rc -p "$TMP/packer" -c conda-forge python=3.10 conda-pack
+$MAMBA_EXE create -y --no-rc -p "$TMP/packer" -c conda-forge python=3.10 conda-pack
 
 echo ">>> STEP 4: Packing Environment..."
 # Verify packer env exists
@@ -56,7 +69,7 @@ if [ ! -f "$TMP/packer/bin/conda-pack" ]; then
     exit 1
 fi
 
-./bin/micromamba run -p "$TMP/packer" conda-pack -p "$TMP/RP_env" -o "$PBS_O_WORKDIR/RP_env.tar.gz"
+$MAMBA_EXE run -p "$TMP/packer" conda-pack -p "$TMP/RP_env" -o "$PBS_O_WORKDIR/RP_env.tar.gz"
 
 # Cleanup
 echo ">>> STEP 5: Verifying Output..."
