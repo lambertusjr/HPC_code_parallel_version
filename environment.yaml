@@ -1,13 +1,13 @@
 name: RP_env
 channels:
-  - pyg
   - pytorch
   - nvidia
   - conda-forge
-  - defaults
+  - nodefaults  # Prevents looking in default/anaconda channels which causes conflicts
 dependencies:
   - python=3.10
   - pip
+  
   # --- Core Data Science ---
   - numpy
   - pandas
@@ -18,6 +18,7 @@ dependencies:
   - matplotlib-inline
   
   # --- Gradient Boosting ---
+  # Note: Installing xgboost via conda-forge is safer for compatibility
   - xgboost
   - optuna
   
@@ -37,25 +38,26 @@ dependencies:
   - jupyter_core
   - jupyter_client
   
-  # --- PyTorch Stack (CUDA 12.1) ---
-  # Installing via Conda is much more stable for HPC than pip
+  # --- PyTorch Stack (CUDA 11.8) ---
+  # Explicitly pinning 11.8 to match your cluster drivers
   - pytorch=2.4.1
   - torchvision
   - torchaudio
-  - pytorch-cuda=12.1
+  - pytorch-cuda=11.8
   - torchmetrics
   - lightning
-  
-  # --- PyTorch Geometric Stack ---
-  # The 'pyg' channel handles the complex scatter/sparse dependencies automatically
-  - pyg
-  - pytorch-scatter
-  - pytorch-sparse
-  - pytorch-cluster
-  - pytorch-spline-conv
   
   # --- Pip Specifics ---
   - pip:
     - pure_eval
     - stack_data
-    # Add any other specific pip-only packages here if needed
+    
+    # --- PyTorch Geometric Stack (Robust Install) ---
+    # We install these via pip to strictly enforce the PyTorch 2.4.1 + CUDA 11.8 match.
+    # The 'find-links' tells pip exactly where to grab the compatible wheels.
+    - torch_geometric
+    - --find-links https://data.pyg.org/whl/torch-2.4.1+cu118.html
+    - torch_scatter
+    - torch_sparse
+    - torch_cluster
+    - torch_spline_conv
