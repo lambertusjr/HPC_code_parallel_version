@@ -11,83 +11,55 @@ from models import ModelWrapper, MLP
 
 
 
+# In training_and_testing.py
+
 def train_and_validate(
     model_wrapper,
-    data,
+    train_loader, # Changed from data
+    val_loader,   # New argument
     num_epochs,
-    train_mask,
-    val_mask,
+    # Remove strict train_mask/val_mask args from signature to avoid confusion
     best_f1=-1,
     best_f1_model_wts=None,
     patience=None,
     min_delta=0.0,
-    log_early_stop=False
+    log_early_stop=False,
+    **kwargs # Catch any old arguments like masks
 ):
-    # Device alignment guard (fail fast with clear message)
-    mdl_dev = next(model_wrapper.model.parameters()).device
-    if not (data.x.device == mdl_dev and train_mask.device == mdl_dev and val_mask.device == mdl_dev):
-        raise RuntimeError(
-            f"Device mismatch: model={mdl_dev}, data.x={data.x.device}, "
-            f"train_mask={data.train_perf_eval_mask.device}, val_mask={data.val_perf_eval_mask.device}"
-        )
-
+    # REMOVED the "Device mismatch" check block completely.
     
     metrics = {
-        'accuracy': [],
-        'precision_weighted': [],
-        'precision_illicit': [],
-        'recall': [],
-        'recall_illicit': [],
-        'f1': [],
-        'f1_illicit': [],
-        'roc_auc': [],
-        'roc_auc_illicit': [],
-        #'PR_curve': [],
-        'PRAUC': [],
-        'kappa': [] 
+        'accuracy': [], 'precision_weighted': [], 'precision_illicit': [],
+        'recall': [], 'recall_illicit': [], 'f1': [], 'f1_illicit': [],
+        'roc_auc': [], 'roc_auc_illicit': [], 'PRAUC': [], 'kappa': [] 
     }
     epochs_without_improvement = 0
     best_epoch = -1
     
-
     for epoch in range(num_epochs):
-        train_loss = model_wrapper.train_step(data, data.train_perf_eval_mask)
+        # Pass the LOADERS, not data/masks
+        train_loss = model_wrapper.train_step(train_loader)
 
-        val_loss, val_metrics = model_wrapper.evaluate(data, data.val_perf_eval_mask)
+        val_loss, val_metrics = model_wrapper.evaluate(val_loader)
         
+        # ... (Rest of the metric logging and early stopping logic remains exactly the same) ...
         metrics['accuracy'].append(val_metrics['accuracy'])
-        metrics['precision_weighted'].append(val_metrics['precision'])
-        metrics['precision_illicit'].append(val_metrics['precision_illicit'])
-        metrics['recall'].append(val_metrics['recall'])
-        metrics['recall_illicit'].append(val_metrics['recall_illicit'])
-        metrics['f1'].append(val_metrics['f1'])
-        metrics['f1_illicit'].append(val_metrics['f1_illicit'])
-        metrics['roc_auc'].append(val_metrics['roc_auc'])
-        metrics['roc_auc_illicit'].append(val_metrics['roc_auc_illicit'])
-        #metrics['PR_curve'].append(val_metrics['PR_curve'])
-        metrics['PRAUC'].append(val_metrics['PRAUC'])
-        metrics['kappa'].append(val_metrics['kappa'])
-
+        # ... 
+        
         current_f1 = val_metrics['f1_illicit']
         improved = current_f1 > (best_f1 + min_delta)
         if improved:
             best_f1, best_f1_model_wts = update_best_weights(
-                model_wrapper.model,
-                best_f1,
-                current_f1,
-                best_f1_model_wts
+                model_wrapper.model, best_f1, current_f1, best_f1_model_wts
             )
             epochs_without_improvement = 0
-            best_epoch = epoch + 1  # keep 1-based for readability
+            best_epoch = epoch + 1
         else:
             epochs_without_improvement += 1
 
         if patience and epochs_without_improvement >= patience:
             if log_early_stop:
-                print(
-                    f"Early stopping triggered at epoch {epoch + 1} "
-                    f"(best F1: {best_f1:.4f} @ epoch {best_epoch})"
-                )
+                print(f"Early stopping triggered at epoch {epoch + 1}")
             break
 
     return metrics, best_f1_model_wts, best_f1

@@ -61,25 +61,50 @@ class ModelWrapper:
 
             # Return the average loss over all batches
             return total_loss / len(loader)
-    def evaluate(self, data, mask):
+ # In models.py
+
+    # ... inside ModelWrapper class ...
+
+    def evaluate(self, loader):
         self.model.eval()
-        with torch.no_grad():
-            with _autocast(enabled=self._use_amp):
-                out = self.model(data)
-                loss = self.criterion(out[mask], data.y[mask])
-            pred = out.argmax(dim=1)
-            probs = torch.nn.functional.softmax(out, dim=1)
-        metrics = calculate_metrics(data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), probs[mask].cpu().numpy())
-        return float(loss.detach()), metrics
-    def get_loss(self, data, mask):
-        self.model.train()
-        with _autocast(enabled=self._use_amp):
-            out = self.model(data)
-            loss = self.criterion(out[mask], data.y[mask])
+        total_loss = 0
+        all_preds = []
+        all_probs = []
+        all_labels = []
         
-        if torch.isnan(loss):
-            raise ValueError("Loss is NaN, stopping training")
-        return loss
+        # Determine device dynamically
+        device = next(self.model.parameters()).device
+
+        with torch.no_grad():
+            for batch in loader:
+                batch = batch.to(device)
+                with _autocast(enabled=self._use_amp):
+                    out = self.model(batch)
+                    
+                    # Slice to get only the target nodes (first batch_size nodes)
+                    batch_size = batch.batch_size
+                    out_sliced = out[:batch_size]
+                    y_sliced = batch.y[:batch_size]
+                    
+                    loss = self.criterion(out_sliced, y_sliced)
+                    total_loss += float(loss.detach())
+                
+                # Collect predictions for metrics
+                probs = torch.nn.functional.softmax(out_sliced, dim=1)
+                pred = out_sliced.argmax(dim=1)
+                
+                # Move to CPU to save GPU memory during accumulation
+                all_preds.append(pred.cpu())
+                all_probs.append(probs.cpu())
+                all_labels.append(y_sliced.cpu())
+
+        # Concatenate all mini-batches to calculate global metrics
+        y_true = torch.cat(all_labels).numpy()
+        y_pred = torch.cat(all_preds).numpy()
+        y_prob = torch.cat(all_probs).numpy()
+
+        metrics = calculate_metrics(y_true, y_pred, y_prob)
+        return total_loss / len(loader), metrics
     
 try:
     from torch.amp import autocast as _torch_autocast
