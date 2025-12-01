@@ -25,6 +25,7 @@ cleanup() {
   /usr/bin/rsync -vax \
     --include '/csv_results/***' \
     --include '/optimization_results.db' \
+    --include '/output.out' \
     --exclude '*' \
     "${TMP}/" "${PBS_O_WORKDIR}/" || true
   [ "$?" -eq 0 ] && /bin/rm -rf "${TMP}"
