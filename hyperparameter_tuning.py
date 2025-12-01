@@ -152,7 +152,10 @@ def run_trial_with_aggressive_cleanup(trial_func, *args, **kwargs):
         
 def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eval, train_mask, val_mask, data_for_optimization):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+    data = data.to(device)
+    train_mask = train_mask.to(device)
+    val_mask = val_mask.to(device)
+    
     # --- MOVE DATA AND MASKS TO DEVICE ONCE ---
     # data = data.to(device)
     # train_perf_eval = train_perf_eval.to(device)
