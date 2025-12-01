@@ -10,6 +10,7 @@ from training_and_testing import train_and_validate, train_and_test
 from torch.optim import Adam
 import gc
 from Helper_functions import print_gpu_tensors
+from torch_geometric.loader import NeighborLoader
 models = ['MLP', 'SVM', 'XGB', 'RF', 'GCN', 'GAT', 'GIN']
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,7 +69,12 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
 
         # --- Model Instantiation (Refactored) ---
         model_instance = _get_model_instance(trial, model, data, device)
-
+        loader = NeighborLoader(
+                    data,
+                    num_neighbors=[10, 10], # Sample 10 neighbors for each of the 2 GNN layers
+                    batch_size=4096,        # Adjust this size to fill your GPU memory safely
+                    input_nodes=train_mask
+                )
         # --- Training and Evaluation ---
         wrapper_models = ['MLP', 'GCN', 'GAT', 'GIN']
         sklearn_models = ['SVM', 'XGB', 'RF']
@@ -84,7 +90,7 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
             model_wrapper.model.to(device)
             
             metrics, best_model_wts, best_f1 = train_and_validate(
-                model_wrapper, data,num_epochs=num_epochs, train_mask=train_mask, val_mask=val_mask,
+                model_wrapper, loader,num_epochs=num_epochs, train_mask=train_mask, val_mask=val_mask,
                 **trial_early_stop_args
             )
             #print_gpu_tensors()

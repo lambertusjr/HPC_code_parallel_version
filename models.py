@@ -22,27 +22,45 @@ class ModelWrapper:
         self._use_amp = enable_amp
         self._scaler = _make_scaler(enabled=self._use_amp)
         
-    def train_step(self, data, mask):
-        self.model.train()
-        self.optimizer.zero_grad()
-        with _autocast(enabled=self._use_amp):
-            out = self.model(data)
-            loss = self.criterion(out[mask], data.y[mask])
-        
-        if torch.isnan(loss):
-            raise ValueError("Loss is NaN, stopping training")
+    def train_step(self, loader):
+            self.model.train()
+            total_loss = 0
+            # Determine device dynamically from the model
+            device = next(self.model.parameters()).device
 
-        loss_value = float(loss.detach())
-        if self._use_amp:
-            self._scaler.scale(loss).backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-            self._scaler.step(self.optimizer)
-            self._scaler.update()
-        else:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-            self.optimizer.step()
-        return loss_value
+            for batch in loader:
+                batch = batch.to(device)
+                self.optimizer.zero_grad()
+                
+                with _autocast(enabled=self._use_amp):
+                    out = self.model(batch)
+                    
+                    # Slice to get only the target nodes (the first batch_size nodes)
+                    # This is equivalent to applying the mask in the full-batch version
+                    batch_size = batch.batch_size
+                    out_sliced = out[:batch_size]
+                    y_sliced = batch.y[:batch_size]
+                    
+                    loss = self.criterion(out_sliced, y_sliced)
+                
+                if torch.isnan(loss):
+                    raise ValueError("Loss is NaN, stopping training")
+
+                # Accumulate loss
+                total_loss += float(loss.detach())
+
+                if self._use_amp:
+                    self._scaler.scale(loss).backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self._scaler.step(self.optimizer)
+                    self._scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.optimizer.step()
+
+            # Return the average loss over all batches
+            return total_loss / len(loader)
     def evaluate(self, data, mask):
         self.model.eval()
         with torch.no_grad():
