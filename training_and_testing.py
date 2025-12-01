@@ -15,6 +15,8 @@ def train_and_validate(
     model_wrapper,
     data,
     num_epochs,
+    train_mask,
+    val_mask,
     best_f1=-1,
     best_f1_model_wts=None,
     patience=None,
@@ -23,7 +25,7 @@ def train_and_validate(
 ):
     # Device alignment guard (fail fast with clear message)
     mdl_dev = next(model_wrapper.model.parameters()).device
-    if not (data.x.device == mdl_dev and data.train_perf_eval_mask.device == mdl_dev and data.val_perf_eval_mask.device == mdl_dev):
+    if not (data.x.device == mdl_dev and train_mask.device == mdl_dev and val_mask.device == mdl_dev):
         raise RuntimeError(
             f"Device mismatch: model={mdl_dev}, data.x={data.x.device}, "
             f"train_mask={data.train_perf_eval_mask.device}, val_mask={data.val_perf_eval_mask.device}"

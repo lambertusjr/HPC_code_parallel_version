@@ -31,7 +31,9 @@ def _early_stop_args_from(source: dict) -> dict:
     
 def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, val_mask):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
+    data = data.to(device)
+    train_mask = train_mask.to(device)
+    val_mask = val_mask.to(device)
     # Define models before try block to ensure they exist in 'locals()' for finally
     model_instance = None
     optimizer = None
@@ -75,17 +77,17 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
         # data = data.to(device) 
         # train_perf_eval = train_perf_eval.to(device) 
         # val_perf_eval = val_perf_eval.to(device) 
-        print_gpu_tensors()
+        #print_gpu_tensors()
         if model in wrapper_models:
             optimizer = torch.optim.Adam(model_instance.parameters(), lr=learning_rate, weight_decay=weight_decay)
             model_wrapper = ModelWrapper(model_instance, optimizer, criterion)
             model_wrapper.model.to(device)
             
             metrics, best_model_wts, best_f1 = train_and_validate(
-                model_wrapper, data,num_epochs=num_epochs,
+                model_wrapper, data,num_epochs=num_epochs, train_mask=train_mask, val_mask=val_mask,
                 **trial_early_stop_args
             )
-            print_gpu_tensors()
+            #print_gpu_tensors()
             torch.cuda.memory._dump_snapshot("Memory snapshot after training")
             return best_f1
 
