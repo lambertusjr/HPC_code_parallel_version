@@ -58,6 +58,20 @@ export MAMBA_ROOT_PREFIX="$TMP/micromamba_root"
 echo ">>> STEP 2: Creating Target Environment..."
 $MAMBA_EXE create -y --no-rc -p "$TMP/RP_env" -f environment.yaml
 
+echo ">>> STEP 2.1: Installing PyTorch Geometric Stack..."
+RP_PIP="$TMP/RP_env/bin/pip"
+
+# Verify pip exists
+if [ ! -f "$RP_PIP" ]; then
+    echo ">>> ERROR: pip binary not found at $RP_PIP"
+    exit 1
+fi
+
+# Explicit install command - this is much safer than YAML
+$RP_PIP install torch_geometric
+$RP_PIP install torch_scatter torch_sparse torch_cluster torch_spline_conv \
+    -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+
 echo ">>> STEP 3: Creating Packer Environment..."
 $MAMBA_EXE create -y --no-rc -p "$TMP/packer" -c conda-forge python=3.10 conda-pack
 

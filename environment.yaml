@@ -52,12 +52,3 @@ dependencies:
     - pure_eval
     - stack_data
     
-    # --- PyTorch Geometric Stack (Robust Install) ---
-    # We install these via pip to strictly enforce the PyTorch 2.4.1 + CUDA 11.8 match.
-    # The 'find-links' tells pip exactly where to grab the compatible wheels.
-    - torch_geometric
-    - --find-links https://data.pyg.org/whl/torch-2.4.1+cu118.html
-    - torch_scatter
-    - torch_sparse
-    - torch_cluster
-    - torch_spline_conv
