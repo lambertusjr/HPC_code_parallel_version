@@ -20,7 +20,6 @@ import torch.nn.functional as F
 import torch_geometric
 from torch_geometric.data import DataLoader, Data
 from torch_geometric.nn import GCNConv, GATConv, GINConv, global_mean_pool
-import torch_geometric.transforms as T
 
 
 #torch.cuda.memory._record_memory_history(max_entries=100000)
@@ -110,10 +109,6 @@ for x in datasets:
             data_for_optimization = "AMLSim"
             data = AMLSim_data
 
-    #Convert edge_index to sparsetensor to save memory
-    transform = T.ToSparseTensor(remove_edge_index=True)
-    data = transform(data)
-    
     def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
         df = pd.DataFrame(results)
         df.to_csv(f"csv_results/{data_for_optimization}_testing_results.csv", index=False)
@@ -127,7 +122,6 @@ for x in datasets:
         val_mask=data.val_mask,
         data_for_optimization=data_for_optimization
     )
-    
     save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")
 # %%
 
