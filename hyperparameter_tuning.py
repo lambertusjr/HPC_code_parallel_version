@@ -69,11 +69,17 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
 
         # --- Model Instantiation (Refactored) ---
         model_instance = _get_model_instance(trial, model, data, device)
-        loader = NeighborLoader(
+        train_loader = NeighborLoader(
                     data,
                     num_neighbors=[10, 10], # Sample 10 neighbors for each of the 2 GNN layers
                     batch_size=4096,        # Adjust this size to fill your GPU memory safely
                     input_nodes=train_mask
+                )
+        val_loader = NeighborLoader(
+                    data,
+                    num_neighbors=[10, 10], # Sample 10 neighbors for each of the 2 GNN layers
+                    batch_size=4096,        # Adjust this size to fill your GPU memory safely
+                    input_nodes=val_mask
                 )
         # --- Training and Evaluation ---
         wrapper_models = ['MLP', 'GCN', 'GAT', 'GIN']
@@ -90,8 +96,7 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
             model_wrapper.model.to(device)
             
             metrics, best_model_wts, best_f1 = train_and_validate(
-                model_wrapper, loader,num_epochs=num_epochs, train_mask=train_mask, val_mask=val_mask,
-                **trial_early_stop_args
+                model_wrapper, train_loader, val_loader, num_epochs=num_epochs, **trial_early_stop_args
             )
             #print_gpu_tensors()
             torch.cuda.memory._dump_snapshot("Memory snapshot after training")
@@ -237,7 +242,7 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
         early_stop_args = _early_stop_args_from(params_for_model)
 
         # --- Final Test Runs (Refactored) ---
-        for _ in trange(10, desc=f"Runs for {model_name}", leave=False, unit="run"):
+        for _ in trange(30, desc=f"Runs for {model_name}", leave=False, unit="run"):
             test_metrics = {}
             best_f1 = None # Not all test runs return this
 

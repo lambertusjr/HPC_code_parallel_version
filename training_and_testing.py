@@ -15,51 +15,78 @@ from models import ModelWrapper, MLP
 
 def train_and_validate(
     model_wrapper,
-    train_loader, # Changed from data
-    val_loader,   # New argument
+    train_loader,  # Updated: expects loader, not full data
+    val_loader,    # Updated: new argument for validation loader
     num_epochs,
-    # Remove strict train_mask/val_mask args from signature to avoid confusion
     best_f1=-1,
     best_f1_model_wts=None,
     patience=None,
     min_delta=0.0,
     log_early_stop=False,
-    **kwargs # Catch any old arguments like masks
+    **kwargs # Safely ignores old arguments like 'train_mask' or 'data' if passed by accident
 ):
-    # REMOVED the "Device mismatch" check block completely.
+    # Device check removed because loaders keep data on CPU until the batch loop.
     
     metrics = {
-        'accuracy': [], 'precision_weighted': [], 'precision_illicit': [],
-        'recall': [], 'recall_illicit': [], 'f1': [], 'f1_illicit': [],
-        'roc_auc': [], 'roc_auc_illicit': [], 'PRAUC': [], 'kappa': [] 
+        'accuracy': [],
+        'precision_weighted': [],
+        'precision_illicit': [],
+        'recall': [],
+        'recall_illicit': [],
+        'f1': [],
+        'f1_illicit': [],
+        'roc_auc': [],
+        'roc_auc_illicit': [],
+        #'PR_curve': [],
+        'PRAUC': [],
+        'kappa': [] 
     }
     epochs_without_improvement = 0
     best_epoch = -1
     
     for epoch in range(num_epochs):
-        # Pass the LOADERS, not data/masks
+        # Updated: Pass the loader directly. 
+        # The model_wrapper.train_step you updated earlier handles the looping.
         train_loss = model_wrapper.train_step(train_loader)
 
+        # Updated: Pass the validation loader.
+        # The model_wrapper.evaluate you updated earlier handles the looping.
         val_loss, val_metrics = model_wrapper.evaluate(val_loader)
         
-        # ... (Rest of the metric logging and early stopping logic remains exactly the same) ...
+        # --- The rest of the logic remains exactly the same ---
         metrics['accuracy'].append(val_metrics['accuracy'])
-        # ... 
-        
+        metrics['precision_weighted'].append(val_metrics['precision'])
+        metrics['precision_illicit'].append(val_metrics['precision_illicit'])
+        metrics['recall'].append(val_metrics['recall'])
+        metrics['recall_illicit'].append(val_metrics['recall_illicit'])
+        metrics['f1'].append(val_metrics['f1'])
+        metrics['f1_illicit'].append(val_metrics['f1_illicit'])
+        metrics['roc_auc'].append(val_metrics['roc_auc'])
+        metrics['roc_auc_illicit'].append(val_metrics['roc_auc_illicit'])
+        #metrics['PR_curve'].append(val_metrics['PR_curve'])
+        metrics['PRAUC'].append(val_metrics['PRAUC'])
+        metrics['kappa'].append(val_metrics['kappa'])
+
         current_f1 = val_metrics['f1_illicit']
         improved = current_f1 > (best_f1 + min_delta)
         if improved:
             best_f1, best_f1_model_wts = update_best_weights(
-                model_wrapper.model, best_f1, current_f1, best_f1_model_wts
+                model_wrapper.model,
+                best_f1,
+                current_f1,
+                best_f1_model_wts
             )
             epochs_without_improvement = 0
-            best_epoch = epoch + 1
+            best_epoch = epoch + 1  # keep 1-based for readability
         else:
             epochs_without_improvement += 1
 
         if patience and epochs_without_improvement >= patience:
             if log_early_stop:
-                print(f"Early stopping triggered at epoch {epoch + 1}")
+                print(
+                    f"Early stopping triggered at epoch {epoch + 1} "
+                    f"(best F1: {best_f1:.4f} @ epoch {best_epoch})"
+                )
             break
 
     return metrics, best_f1_model_wts, best_f1
@@ -98,3 +125,4 @@ def train_and_test(
     test_loss, test_metrics = model_wrapper.evaluate(data, data.test_perf_eval_mask)
     
     return test_metrics, best_f1
+
