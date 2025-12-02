@@ -100,29 +100,33 @@ def update_best_weights(model, best_f1, current_f1, best_f1_model_wts):
 
 def train_and_test(
     model_wrapper,
-    data,
+    train_loader,
+    val_loader,
+    test_loader,
     num_epochs=200,
     patience=None,
     min_delta=0.0,
-    log_early_stop=False
+    log_early_stop=False,
+    **kwargs # Catch legacy arguments to prevent errors
 ):
     
-    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # model_wrapper.model.to(device)
-    #data = data.to(device)
-    
-    
+    # 1. Train and Validate (using the train and val loaders)
     metrics, best_model_wts, best_f1 = train_and_validate(
         model_wrapper,
-        data,
-        num_epochs,
+        train_loader,
+        val_loader,
+        num_epochs=num_epochs,
         patience=patience,
         min_delta=min_delta,
         log_early_stop=log_early_stop
     )
     
+    # 2. Load the best weights found during validation
     model_wrapper.model.load_state_dict(best_model_wts)
-    test_loss, test_metrics = model_wrapper.evaluate(data, data.test_perf_eval_mask)
+    
+    # 3. Test the model using the test_loader
+    # This calls the updated evaluate() method in ModelWrapper which iterates over the loader
+    test_loss, test_metrics = model_wrapper.evaluate(test_loader)
     
     return test_metrics, best_f1
 

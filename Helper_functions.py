@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, precision_recall_curve, precision_recall_fscore_support, precision_score, recall_score, roc_auc_score, auc
 from contextlib import contextmanager
 import gc
-
+from torch_geometric.loader import NeighborLoader
 
 try:
     from torch.amp import autocast as _autocast_new  # torch>=2.0 preferred API
@@ -222,13 +222,13 @@ def _get_model_instance(trial, model, data, device):
 
 def _run_wrapper_model_test(model_name, data, params, criterion, early_stop_args, device, train_perf_eval, val_perf_eval, test_perf_eval):
     """
-    Helper to run the final test for MLP, GCN, GAT, and GIN models.
+    Helper to run the final test for MLP, GCN, GAT, and GIN models using NeighborLoaders.
     """
     hidden_units = params.get("hidden_units", 64)
     learning_rate = params.get("learning_rate", 0.005)
     weight_decay = params.get("weight_decay", 0.0001)
 
-    # Import model classes locally to avoid circular import at module import time
+    # Import model classes locally
     from models import MLP, GCN, GAT, GIN
 
     if model_name == "MLP":
@@ -237,23 +237,31 @@ def _run_wrapper_model_test(model_name, data, params, criterion, early_stop_args
         model = GCN(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units).to(device)
     elif model_name == "GAT":
         num_heads = params.get("num_heads", 4)
-        model = GAT(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units, num_heads=num_heads)#.to(device)
+        model = GAT(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units, num_heads=num_heads).to(device)
     elif model_name == "GIN":
         model = GIN(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units).to(device)
     else:
         raise ValueError(f"Invalid wrapper model: {model_name}")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    # Import ModelWrapper locally to avoid circular import at module import time
+    
     from models import ModelWrapper
     model_wrapper = ModelWrapper(model=model, optimizer=optimizer, criterion=criterion)
 
-    # Import training function locally to avoid pulling heavy dependencies at module import time
+    # --- NEW: Create Loaders for the final test run ---
+    # We use the same neighbor sampling parameters as in the optimization loop
+    train_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=4096, input_nodes=train_perf_eval, shuffle=True, num_workers=4)
+    val_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=4096, input_nodes=val_perf_eval, shuffle=False, num_workers=4)
+    test_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=4096, input_nodes=test_perf_eval, shuffle=False, num_workers=4)
+
     from training_and_testing import train_and_test
 
+    # Pass the loaders instead of the raw data object
     return train_and_test(
         model_wrapper=model_wrapper,
-        data=data,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
         **early_stop_args
     )
     
