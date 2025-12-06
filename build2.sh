@@ -69,7 +69,7 @@ fi
 
 # Explicit install command - this is much safer than YAML
 $RP_PIP install torch_geometric
-$RP_PIP install torch_scatter torch_sparse torch_cluster torch_spline_conv \
+$RP_PIP install torch_scatter torch_sparse torch_cluster torch_spline_conv pyg_lib \
     -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
 
 echo ">>> STEP 3: Creating Packer Environment..."
