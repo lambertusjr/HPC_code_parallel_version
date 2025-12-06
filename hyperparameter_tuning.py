@@ -9,7 +9,7 @@ from tqdm import tqdm, trange
 from training_and_testing import train_and_validate, train_and_test
 from torch.optim import Adam
 import gc
-from Helper_functions import print_gpu_tensors
+from Helper_functions import print_gpu_tensors, find_optimal_batch_size
 from torch_geometric.loader import NeighborLoader
 models = ['MLP', 'SVM', 'XGB', 'RF', 'GCN', 'GAT', 'GIN']
 
@@ -30,7 +30,7 @@ def _early_stop_args_from(source: dict) -> dict:
         "log_early_stop": EARLY_STOP_LOGGING,
     }
     
-def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, val_mask):
+def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, val_mask, batch_size=4096):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     data = data.to(device)
     train_mask = train_mask.to(device)
@@ -72,13 +72,13 @@ def objective(trial, model, data, train_perf_eval, val_perf_eval, train_mask, va
         train_loader = NeighborLoader(
                     data,
                     num_neighbors=[10, 10], # Sample 10 neighbors for each of the 2 GNN layers
-                    batch_size=4096,        # Adjust this size to fill your GPU memory safely
+                    batch_size=batch_size,        # Use calculated optimal batch size
                     input_nodes=train_mask
                 )
         val_loader = NeighborLoader(
                     data,
                     num_neighbors=[10, 10], # Sample 10 neighbors for each of the 2 GNN layers
-                    batch_size=4096,        # Adjust this size to fill your GPU memory safely
+                    batch_size=batch_size,        # Use calculated optimal batch size
                     input_nodes=val_mask
                 )
         # --- Training and Evaluation ---
@@ -214,6 +214,29 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
                 storage=db_path,
                 load_if_exists=True
             )
+            # --- Find Optimal Batch Size ---
+            optimal_batch_size = 4096
+            wrapper_models = ['MLP', 'GCN', 'GAT', 'GIN']
+            if model_name in wrapper_models:
+                print(f"Finding optimal batch size for {model_name}...")
+                
+                # Create a dummy builder that mimics what _get_model_instance does,
+                # but with fixed "safe" or "middle" hyperparameters just for memory sizing.
+                def model_builder_for_size_check():
+                    class MockTrial:
+                        def suggest_int(self, name, low, high, step=None): return high
+                        def suggest_float(self, name, low, high, log=False): return low
+                        def suggest_categorical(self, name, choices): return choices[0]
+                    
+                    return _get_model_instance(MockTrial(), model_name, data, device)
+
+                optimal_batch_size = find_optimal_batch_size(
+                    model_builder_for_size_check,
+                    data,
+                    device,
+                    train_mask
+                )
+
             with tqdm(total=n_trials, desc=f"{model_name} trials", leave=False, unit="trial") as trial_bar:
                 def _optuna_progress_callback(study, trial):
                     trial_bar.update()
@@ -221,7 +244,7 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
                 # Note: data, train_perf_eval, etc., are now the device tensors
                 study.optimize(
                     lambda trial: run_trial_with_aggressive_cleanup( 
-                        objective, trial, model_name, data, train_perf_eval, val_perf_eval, train_mask, val_mask
+                        objective, trial, model_name, data, train_perf_eval, val_perf_eval, train_mask, val_mask, batch_size=optimal_batch_size
                     ),
                     n_trials=n_trials,
                     callbacks=[_optuna_progress_callback]
@@ -250,7 +273,7 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
                 case "MLP" | "GCN" | "GAT" | "GIN":
                     test_metrics, best_f1 = _run_wrapper_model_test(
                         model_name, data, params_for_model, criterion, early_stop_args, device,
-                        train_perf_eval, val_perf_eval, test_perf_eval
+                        train_perf_eval, val_perf_eval, test_perf_eval, batch_size=optimal_batch_size
                     )
                 case "SVM" | "RF" | "XGB":
                     test_metrics = train_and_test_NMW_models(
