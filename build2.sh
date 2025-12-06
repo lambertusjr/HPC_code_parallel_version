@@ -33,7 +33,14 @@ if [ ! -f "bin/micromamba" ]; then
     exit 1
 fi
 
-TMP="/scratch-small-local/${PBS_JOBID//./-}"
+SCRATCH_BASE="/scratch-small-local"
+# Check if scratch dir exists AND is writable. If not, fallback to home scratch.
+if [ ! -w "${SCRATCH_BASE}" ]; then
+    echo ">>> /scratch-small-local not writable or missing. Falling back to \$HOME/scratch"
+    SCRATCH_BASE="$HOME/scratch"
+fi
+
+TMP="${SCRATCH_BASE}/${PBS_JOBID//./-}"
 echo ">>> Creating TMP directory: $TMP"
 mkdir -p "$TMP"
 
