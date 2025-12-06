@@ -40,9 +40,10 @@ if [ ! -w "${SCRATCH_BASE}" ]; then
     SCRATCH_BASE="$HOME/scratch"
 fi
 
-TMP="${SCRATCH_BASE}/${PBS_JOBID//./-}"
-echo ">>> Creating TMP directory: $TMP"
-mkdir -p "$TMP"
+SPACED="${PBS_JOBID//./-}" 
+TMP=/scratch-small-local/${SPACED} # E.g. 249926.hpc1.hpc
+mkdir -p ${TMP}
+echo "Temporary work dir: ${TMP}"
 
 echo ">>> STEP 1: Copying Micromamba to Scratch..."
 # Copy the binary from the submit dir to the compute node scratch
