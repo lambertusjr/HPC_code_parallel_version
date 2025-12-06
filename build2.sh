@@ -33,12 +33,7 @@ if [ ! -f "bin/micromamba" ]; then
     exit 1
 fi
 
-SCRATCH_BASE="/scratch-small-local"
-# Check if scratch dir exists AND is writable. If not, fallback to home scratch.
-if [ ! -w "${SCRATCH_BASE}" ]; then
-    echo ">>> /scratch-small-local not writable or missing. Falling back to \$HOME/scratch"
-    SCRATCH_BASE="$HOME/scratch"
-fi
+
 
 SPACED="${PBS_JOBID//./-}" 
 TMP=/scratch-small-local/${SPACED} # E.g. 249926.hpc1.hpc
