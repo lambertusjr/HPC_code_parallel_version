@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import torch_geometric
 from torch_geometric.data import DataLoader, Data
 from torch_geometric.nn import GCNConv, GATConv, GINConv, global_mean_pool
-
+import gc
 
 #torch.cuda.memory._record_memory_history(max_entries=100000)
 
@@ -108,18 +108,34 @@ for x in datasets:
         case "AMLSim":
             data_for_optimization = "AMLSim"
             data = AMLSim_data
-
+    device='cuda' if torch.cuda.is_available() else 'cpu'
+    data = data.to(device)
+    train_perf_eval = data.train_perf_eval_mask.to(device)
+    val_perf_eval=data.val_perf_eval_mask.to(device)
+    test_perf_eval=data.test_perf_eval_mask.to(device)
+    train_mask=data.train_mask.to(device)
+    val_mask=data.val_mask.to(device)
+    test_mask=data.test_mask.to(device)
+    del data.train_perf_eval_mask
+    del data.val_perf_eval_mask
+    del data.test_perf_eval_mask
+    del data.train_mask
+    del data.val_mask
+    del data.test_mask
+    gc.collect()
+    if device == 'cuda':
+        torch.cuda.empty_cache()
     def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
         df = pd.DataFrame(results)
         df.to_csv(f"csv_results/{data_for_optimization}_testing_results.csv", index=False)
     model_parameters, testing_results = run_optimization(
-        models=['GCN', 'GAT', 'GIN', 'MLP'],
+        models=[ 'GAT', 'GIN', 'GCN'], #'XGB', 'RF', 'MLP', 'GCN', 'GAT', 'GIN'
         data=data,
-        train_perf_eval=data.train_perf_eval_mask,
-        val_perf_eval=data.val_perf_eval_mask,
-        test_perf_eval=data.test_perf_eval_mask,
-        train_mask=data.train_mask,
-        val_mask=data.val_mask,
+        train_perf_eval= train_perf_eval,
+        val_perf_eval= val_perf_eval,
+        test_perf_eval = test_perf_eval,
+        train_mask = train_mask,
+        val_mask = val_mask,
         data_for_optimization=data_for_optimization
     )
     save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")

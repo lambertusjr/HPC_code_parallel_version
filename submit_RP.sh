@@ -22,7 +22,7 @@ cd ${TMP}
 
 cleanup() {
   echo "Copying results back to ${PBS_O_WORKDIR}/ (cleanup)"
-  /usr/bin/rsync -vax \
+  /usr/bin/rsync -vax --progress \
     --include '/csv_results/***' \
     --include '/optimization_results.db' \
     --include '/output.out' \
