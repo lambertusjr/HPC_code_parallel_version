@@ -26,6 +26,7 @@ cleanup() {
     --include '/csv_results/***' \
     --include '/optimization_results.db' \
     --include '/output.out' \
+    --include '/worker*.log' \
     --exclude '*' \
     "${TMP}/" "${PBS_O_WORKDIR}/" || true
   [ "$?" -eq 0 ] && /bin/rm -rf "${TMP}"
@@ -58,7 +59,7 @@ python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(
 
 if [[ -f train.py ]]; then
   echo "Starting Worker 0 on GPU 0 (HiMedium)"
-  # Run in background with & and wait at the end
+  # Run in background with & and redirect output
   CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_HiMedium > "worker0_HiMedium.log" 2>&1 &
   
   echo "Starting Worker 1 on GPU 1 (LiMedium)"
