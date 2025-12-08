@@ -114,9 +114,9 @@ match dataset_name:
         data = AMLSimDataset(root='/Users/lambertusvanzyl/Documents/Datasets/AMLSim_dataset')[0]
 
 # Convert edge_index to sparsetensor to save memory
-import torch_geometric.transforms as T
-transform = T.ToSparseTensor(remove_edge_index=True)
-data = transform(data)
+# import torch_geometric.transforms as T
+# transform = T.ToSparseTensor(remove_edge_index=True)
+# data = transform(data)
 
 def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
     df = pd.DataFrame(results)
