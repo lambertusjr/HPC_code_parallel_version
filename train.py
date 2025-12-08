@@ -83,62 +83,57 @@ from models import GCN, ModelWrapper
 #         print(f"Epoch {i+1:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val F1 illicit: {val_metrics['f1_illicit']:.4f}")
 
 # %% Optuna runs
-IBM_data_LiMedium = IBMAMLDataset_LiMedium(root='dataset/LiMedium')[0]
-IBM_data_HiMedium = IBMAMLDataset_HiMedium(root='dataset/HiMedium')[0]
+# %% Optuna runs
+import sys
 from hyperparameter_tuning import run_optimization
-#datasets = ["IBM_AML_HiSmall", "IBM_AML_LiSmall", "IBM_AML_HiMedium", "IBM_AML_LiMedium", "AMLSim"]
-datasets = ['IBM_AML_HiMedium', 'IBM_AML_LiMedium']
-for x in datasets:
-    match x:
-        case "Elliptic":
-            data_for_optimization = "Elliptic"
-            data = elliptic_data
-        case "IBM_AML_HiSmall":
-            data_for_optimization = "IBM_AML_HiSmall"
-            data = IBM_data_HiSmall
-        case "IBM_AML_LiSmall":
-            data_for_optimization = "IBM_AML_LiSmall"
-            data = IBM_data_LiSmall
-        case "IBM_AML_HiMedium":
-            data_for_optimization = "IBM_AML_HiMedium"
-            data = IBM_data_HiMedium
-        case "IBM_AML_LiMedium":
-            data_for_optimization = "IBM_AML_LiMedium"
-            data = IBM_data_LiMedium
-        case "AMLSim":
-            data_for_optimization = "AMLSim"
-            data = AMLSim_data
-    device='cuda' if torch.cuda.is_available() else 'cpu'
-    data = data.to(device)
-    train_perf_eval = data.train_perf_eval_mask.to(device)
-    val_perf_eval=data.val_perf_eval_mask.to(device)
-    test_perf_eval=data.test_perf_eval_mask.to(device)
-    train_mask=data.train_mask.to(device)
-    val_mask=data.val_mask.to(device)
-    test_mask=data.test_mask.to(device)
-    del data.train_perf_eval_mask
-    del data.val_perf_eval_mask
-    del data.test_perf_eval_mask
-    del data.train_mask
-    del data.val_mask
-    del data.test_mask
-    gc.collect()
-    if device == 'cuda':
-        torch.cuda.empty_cache()
-    def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
-        df = pd.DataFrame(results)
-        df.to_csv(f"csv_results/{data_for_optimization}_testing_results.csv", index=False)
-    model_parameters, testing_results = run_optimization(
-        models=[ 'GAT', 'GIN', 'GCN'], #'XGB', 'RF', 'MLP', 'GCN', 'GAT', 'GIN'
-        data=data,
-        train_perf_eval= train_perf_eval,
-        val_perf_eval= val_perf_eval,
-        test_perf_eval = test_perf_eval,
-        train_mask = train_mask,
-        val_mask = val_mask,
-        data_for_optimization=data_for_optimization
-    )
-    save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")
+
+# Default to a specific dataset if no arg provided, or exit
+dataset_name = sys.argv[1] if len(sys.argv) > 1 else "IBM_AML_HiMedium"
+
+print(f"Running optimization for: {dataset_name}")
+
+# Load ONLY the required data to save memory
+match dataset_name:
+    case "Elliptic":
+        data_for_optimization = "Elliptic"
+        data = EllipticDataset(root='/Users/lambertusvanzyl/Documents/Datasets/Elliptic_dataset')[0]
+    case "IBM_AML_HiSmall":
+        data_for_optimization = "IBM_AML_HiSmall"
+        data = IBMAMLDataset_HiSmall(root='/Users/lambertusvanzyl/Documents/Datasets/IBM_AML_dataset/HiSmall')[0]
+    case "IBM_AML_LiSmall":
+        data_for_optimization = "IBM_AML_LiSmall"
+        data = IBMAMLDataset_LiSmall(root='/Users/lambertusvanzyl/Documents/Datasets/IBM_AML_dataset/LiSmall')[0]
+    case "IBM_AML_HiMedium":
+        data_for_optimization = "IBM_AML_HiMedium"
+        data = IBMAMLDataset_HiMedium(root='dataset/HiMedium')[0]
+    case "IBM_AML_LiMedium":
+        data_for_optimization = "IBM_AML_LiMedium"
+        data = IBMAMLDataset_LiMedium(root='dataset/LiMedium')[0]
+    case "AMLSim":
+        data_for_optimization = "AMLSim"
+        data = AMLSimDataset(root='/Users/lambertusvanzyl/Documents/Datasets/AMLSim_dataset')[0]
+
+# Convert edge_index to sparsetensor to save memory
+import torch_geometric.transforms as T
+transform = T.ToSparseTensor(remove_edge_index=True)
+data = transform(data)
+
+def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
+    df = pd.DataFrame(results)
+    df.to_csv(f"csv_results/{data_for_optimization}_testing_results.csv", index=False)
+
+model_parameters, testing_results = run_optimization(
+    models=['GCN', 'GAT', 'GIN', 'MLP'],
+    data=data,
+    train_perf_eval=data.train_perf_eval_mask,
+    val_perf_eval=data.val_perf_eval_mask,
+    test_perf_eval=data.test_perf_eval_mask,
+    train_mask=data.train_mask,
+    val_mask=data.val_mask,
+    data_for_optimization=data_for_optimization
+)
+
+save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")
 # %%
 
 

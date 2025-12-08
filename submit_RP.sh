@@ -57,20 +57,14 @@ mkdir -p "${MPLCONFIGDIR}"
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 if [[ -f train.py ]]; then
-  # Launch 3 parallel workers, each pinned to a specific GPU
-  echo "Starting Worker 0 on GPU 0"
-  export CUDA_VISIBLE_DEVICES=0
-  python -u train.py > "${PBS_O_WORKDIR}/worker_0.log" 2>&1 &
-
-  echo "Starting Worker 1 on GPU 1"
-  export CUDA_VISIBLE_DEVICES=1
-  python -u train.py > "${PBS_O_WORKDIR}/worker_1.log" 2>&1 &
-
-  echo "Starting Worker 2 on GPU 2"
-  export CUDA_VISIBLE_DEVICES=2
-  python -u train.py > "${PBS_O_WORKDIR}/worker_2.log" 2>&1 &
-
-  # Important: Wait for all background jobs to finish before exiting
+  echo "Starting Worker 0 on GPU 0 (HiMedium)"
+  # Run in background with & and wait at the end
+  CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_HiMedium > "worker0_HiMedium.log" 2>&1 &
+  
+  echo "Starting Worker 1 on GPU 1 (LiMedium)"
+  CUDA_VISIBLE_DEVICES=1 python -u train.py IBM_AML_LiMedium > "worker1_LiMedium.log" 2>&1 &
+  
+  # Wait for all background jobs to finish before cleanup
   wait
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
