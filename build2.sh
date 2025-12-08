@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N build_RP_env
-#PBS -l select=1:ncpus=8:mem=32GB:host=comp049
+#PBS -l select=1:ncpus=8:mem=32GB
 #PBS -l walltime=02:00:00
 #PBS -j oe
 #PBS -o build_env.out

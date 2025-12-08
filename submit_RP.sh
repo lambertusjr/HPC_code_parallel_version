@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
-#PBS -l select=1:ncpus=32:mem=128GB:ngpus=3:Qlist=ee:host=comp055
+#PBS -l select=1:ncpus=32:mem=128GB:ngpus=3:Qlist=ee:host=comp056
 #PBS -l walltime=200:00:00
 #PBS -j oe
 #PBS -o output.out
