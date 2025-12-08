@@ -410,10 +410,10 @@ def check_study_existence(model_name, data_for_optimization):
         num_trials = len(study.trials)
         
         if num_trials < 50:
-            # 3. Less than 50 runs: Do NOT delete.
-            print(f"Study '{study_name}' found with {num_trials} trials (< 50). Keeping study.")
+            # 3. Less than 50 runs: Delete and restart.
+            print(f"Study '{study_name}' found with {num_trials} trials (< 50). Deleting study to restart.")
             optuna.delete_study(study_name=study_name, storage=storage_url) 
-            return True
+            return False
         else:
             # 4. 50 or more runs: study is valid, return True
             print(f"Study '{study_name}' found with {num_trials} trials (>= 50). Study is valid.")
