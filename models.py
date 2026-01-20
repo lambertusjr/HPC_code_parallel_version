@@ -142,7 +142,7 @@ class GCN(torch.nn.Module):
         # x: Node features [num_nodes, in_channels]
         # edge_index: Graph connectivity [2, num_edges]
         x = data.x
-        edge_index = data.edge_index
+        edge_index = data.adj_t if hasattr(data, 'adj_t') else data.edge_index
 
         x = self.conv1(x, edge_index)
         x = F.relu(x)
@@ -162,7 +162,8 @@ class GAT(nn.Module):
         self.conv2 = GATConv(total_hidden, num_classes, heads=1, concat=False, dropout=0.6)
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x = data.x
+        edge_index = data.adj_t if hasattr(data, 'adj_t') else data.edge_index
         x = self.conv1(x, edge_index)
         x = F.elu(x)
         x = self.conv2(x, edge_index)
@@ -187,7 +188,8 @@ class GIN(nn.Module):
         self.fc = nn.Linear(hidden_units, num_classes)
 
     def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
+        x, batch = data.x, data.batch
+        edge_index = data.adj_t if hasattr(data, 'adj_t') else data.edge_index
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
