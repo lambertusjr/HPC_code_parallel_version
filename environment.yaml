@@ -21,6 +21,7 @@ dependencies:
   # Note: Installing xgboost via conda-forge is safer for compatibility
   - xgboost
   - optuna
+  - yacs
   
   # --- Utilities ---
   - sqlalchemy

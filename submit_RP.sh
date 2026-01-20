@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
-#PBS -l select=1:ncpus=32:mem=128GB:ngpus=3:Qlist=ee:host=comp055
+#PBS -l select=1:ncpus=32:mem=128GB:ngpus=3:Qlist=ee:host=comp056
 #PBS -l walltime=200:00:00
 #PBS -j oe
 #PBS -o output.out
@@ -22,10 +22,11 @@ cd ${TMP}
 
 cleanup() {
   echo "Copying results back to ${PBS_O_WORKDIR}/ (cleanup)"
-  /usr/bin/rsync -vax \
+  /usr/bin/rsync -vax --progress \
     --include '/csv_results/***' \
     --include '/optimization_results.db' \
     --include '/output.out' \
+    --include '/worker*.log' \
     --exclude '*' \
     "${TMP}/" "${PBS_O_WORKDIR}/" || true
   [ "$?" -eq 0 ] && /bin/rm -rf "${TMP}"
@@ -57,7 +58,15 @@ mkdir -p "${MPLCONFIGDIR}"
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 if [[ -f train.py ]]; then
-  python -u train.py "${PBS_O_WORKDIR}/live_run.log" 2>&1
+  echo "Starting Worker 0 on GPU 0 (HiMedium)"
+  # Run in background with & and redirect output
+  CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_HiMedium > "worker0_HiMedium.log" 2>&1 &
+  
+  echo "Starting Worker 1 on GPU 1 (LiMedium)"
+  CUDA_VISIBLE_DEVICES=1 python -u train.py IBM_AML_LiMedium > "worker1_LiMedium.log" 2>&1 &
+  
+  # Wait for all background jobs to finish before cleanup
+  wait
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
 fi
