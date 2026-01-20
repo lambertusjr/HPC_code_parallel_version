@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, precision_recall_curve, precision_recall_fscore_support, precision_score, recall_score, roc_auc_score, auc
 from contextlib import contextmanager
 import gc
-
+from torch_geometric.loader import NeighborLoader
 
 try:
     from torch.amp import autocast as _autocast_new  # torch>=2.0 preferred API
@@ -220,15 +220,15 @@ def _get_model_instance(trial, model, data, device):
     else:
         raise ValueError(f"Unknown model: {model}")
 
-def _run_wrapper_model_test(model_name, data, params, criterion, early_stop_args, device, train_perf_eval, val_perf_eval, test_perf_eval):
+def _run_wrapper_model_test(model_name, data, params, criterion, early_stop_args, device, train_perf_eval, val_perf_eval, test_perf_eval, batch_size=4096):
     """
-    Helper to run the final test for MLP, GCN, GAT, and GIN models.
+    Helper to run the final test for MLP, GCN, GAT, and GIN models using NeighborLoaders.
     """
     hidden_units = params.get("hidden_units", 64)
     learning_rate = params.get("learning_rate", 0.005)
     weight_decay = params.get("weight_decay", 0.0001)
 
-    # Import model classes locally to avoid circular import at module import time
+    # Import model classes locally
     from models import MLP, GCN, GAT, GIN
 
     if model_name == "MLP":
@@ -237,23 +237,31 @@ def _run_wrapper_model_test(model_name, data, params, criterion, early_stop_args
         model = GCN(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units).to(device)
     elif model_name == "GAT":
         num_heads = params.get("num_heads", 4)
-        model = GAT(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units, num_heads=num_heads)#.to(device)
+        model = GAT(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units, num_heads=num_heads).to(device)
     elif model_name == "GIN":
         model = GIN(num_node_features=data.num_features, num_classes=2, hidden_units=hidden_units).to(device)
     else:
         raise ValueError(f"Invalid wrapper model: {model_name}")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    # Import ModelWrapper locally to avoid circular import at module import time
+    
     from models import ModelWrapper
     model_wrapper = ModelWrapper(model=model, optimizer=optimizer, criterion=criterion)
 
-    # Import training function locally to avoid pulling heavy dependencies at module import time
+    # --- NEW: Create Loaders for the final test run ---
+    # We use the same neighbor sampling parameters as in the optimization loop
+    train_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=batch_size, input_nodes=train_perf_eval, shuffle=True, num_workers=4)
+    val_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=batch_size, input_nodes=val_perf_eval, shuffle=False, num_workers=4)
+    test_loader = NeighborLoader(data, num_neighbors=[10, 10], batch_size=batch_size, input_nodes=test_perf_eval, shuffle=False, num_workers=4)
+
     from training_and_testing import train_and_test
 
+    # Pass the loaders instead of the raw data object
     return train_and_test(
         model_wrapper=model_wrapper,
-        data=data,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
         **early_stop_args
     )
     
@@ -402,9 +410,9 @@ def check_study_existence(model_name, data_for_optimization):
         num_trials = len(study.trials)
         
         if num_trials < 50:
-            # 3. Less than 50 runs: wipe the study and return False
-            print(f"Study '{study_name}' found with only {num_trials} trials (< 50). Deleting study.")
-            optuna.delete_study(study_name=study_name, storage=storage_url)
+            # 3. Less than 50 runs: Delete and restart.
+            print(f"Study '{study_name}' found with {num_trials} trials (< 50). Deleting study to restart.")
+            optuna.delete_study(study_name=study_name, storage=storage_url) 
             return False
         else:
             # 4. 50 or more runs: study is valid, return True
@@ -433,3 +441,108 @@ def print_gpu_tensors():
             pass
     print("-" * 60)
     print(f"Total Approximate Tensor Memory: {total_mem:.2f} MB")
+
+def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbors=[10, 10]):
+    """
+    Finds the optimal batch size for NeighborLoader by testing increasing sizes
+    until OOM, then binary searching.
+    
+    Args:
+        model_builder: A function that returns a fresh model instance (on CPU).
+        data: The data object.
+        device: The device to train on.
+        train_mask: Mask for training nodes.
+        num_neighbors: Neighbor sampling configuration.
+    
+    Returns:
+        int: Optimal batch size (approx 90% of max safe size).
+    """
+    print("Searching for optimal batch size...")
+    
+    low = 2048
+    high = 500000 # Start with a reasonable upper bound
+    optimal = 4096 # Safe default
+    
+    # Define a simple training loop for testing
+    def test_batch_size(batch_size):
+        try:
+            # Create a fresh model and move to device
+            model = model_builder().to(device)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+            criterion = torch.nn.CrossEntropyLoss()
+            
+            loader = NeighborLoader(
+                data,
+                num_neighbors=num_neighbors,
+                batch_size=batch_size,
+                input_nodes=train_mask,
+                shuffle=True
+            )
+            
+            model.train()
+            # Run a few batches to ensure stability
+            # We don't need to run a full epoch, just enough to fill memory buffers
+            steps = 0
+            for batch in loader:
+                batch = batch.to(device)
+                optimizer.zero_grad()
+                out = model(batch)
+                
+                # Slice logic similar to ModelWrapper
+                batch_size_actual = batch.batch_size
+                out_sliced = out[:batch_size_actual]
+                y_sliced = batch.y[:batch_size_actual]
+                
+                loss = criterion(out_sliced, y_sliced)
+                loss.backward()
+                optimizer.step()
+                
+                steps += 1
+                if steps >= 5: # Test 5 batches
+                    break
+            
+            del model, optimizer, criterion, loader, batch, out, out_sliced, loss
+            if device == 'cuda':
+                torch.cuda.empty_cache()
+            return True
+            
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"Batch size {batch_size} OOM.")
+                if device == 'cuda':
+                     torch.cuda.empty_cache()
+                return False
+            else:
+                raise e
+        except Exception as e:
+            print(f"Batch size {batch_size} failed with error: {e}")
+            return False
+
+    # 1. Exponential search to find upper bound
+    current = low
+    max_safe = low
+    
+    while current <= high:
+        print(f"Testing batch size: {current}")
+        if test_batch_size(current):
+            max_safe = current
+            current *= 2
+        else:
+            high = current
+            break
+            
+    # 2. Binary search between max_safe and high (which failed)
+    low = max_safe
+    
+    while low < high - 256: # Granularity of 256
+        mid = (low + high) // 2
+        print(f"Binary search testing: {mid}")
+        if test_batch_size(mid):
+            low = mid
+        else:
+            high = mid
+            
+    # Return 90% of the max found size to be safe
+    optimal = int(low * 0.9)
+    print(f"Optimal batch size found: {optimal}")
+    return optimal

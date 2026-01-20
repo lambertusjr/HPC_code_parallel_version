@@ -10,7 +10,7 @@ from datetime import timedelta
 class EllipticDataset(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
         super(EllipticDataset, self).__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):
@@ -75,7 +75,7 @@ class EllipticDataset(InMemoryDataset):
 class IBMAMLDataset_HiSmall(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):
@@ -257,7 +257,7 @@ class IBMAMLDataset_HiSmall(InMemoryDataset):
 class IBMAMLDataset_LiSmall(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):
@@ -440,7 +440,7 @@ class IBMAMLDataset_LiSmall(InMemoryDataset):
 class IBMAMLDataset_LiMedium(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):
@@ -623,7 +623,7 @@ class IBMAMLDataset_LiMedium(InMemoryDataset):
 class IBMAMLDataset_HiMedium(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):
@@ -807,7 +807,7 @@ class IBMAMLDataset_HiMedium(InMemoryDataset):
 class AMLSimDataset(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
         super(AMLSimDataset, self).__init__(root, transform, pre_transform)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices = torch.load(self.processed_paths[0], weights_only=False)
 
     @property
     def raw_file_names(self):

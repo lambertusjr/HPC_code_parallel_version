@@ -11,26 +11,21 @@ from models import ModelWrapper, MLP
 
 
 
+# In training_and_testing.py
+
 def train_and_validate(
     model_wrapper,
-    data,
+    train_loader,  # Updated: expects loader, not full data
+    val_loader,    # Updated: new argument for validation loader
     num_epochs,
-    train_mask,
-    val_mask,
     best_f1=-1,
     best_f1_model_wts=None,
     patience=None,
     min_delta=0.0,
-    log_early_stop=False
+    log_early_stop=False,
+    **kwargs # Safely ignores old arguments like 'train_mask' or 'data' if passed by accident
 ):
-    # Device alignment guard (fail fast with clear message)
-    mdl_dev = next(model_wrapper.model.parameters()).device
-    if not (data.x.device == mdl_dev and train_mask.device == mdl_dev and val_mask.device == mdl_dev):
-        raise RuntimeError(
-            f"Device mismatch: model={mdl_dev}, data.x={data.x.device}, "
-            f"train_mask={data.train_perf_eval_mask.device}, val_mask={data.val_perf_eval_mask.device}"
-        )
-
+    # Device check removed because loaders keep data on CPU until the batch loop.
     
     metrics = {
         'accuracy': [],
@@ -49,12 +44,16 @@ def train_and_validate(
     epochs_without_improvement = 0
     best_epoch = -1
     
-
     for epoch in range(num_epochs):
-        train_loss = model_wrapper.train_step(data, data.train_perf_eval_mask)
+        # Updated: Pass the loader directly. 
+        # The model_wrapper.train_step you updated earlier handles the looping.
+        train_loss = model_wrapper.train_step(train_loader)
 
-        val_loss, val_metrics = model_wrapper.evaluate(data, data.val_perf_eval_mask)
+        # Updated: Pass the validation loader.
+        # The model_wrapper.evaluate you updated earlier handles the looping.
+        val_loss, val_metrics = model_wrapper.evaluate(val_loader)
         
+        # --- The rest of the logic remains exactly the same ---
         metrics['accuracy'].append(val_metrics['accuracy'])
         metrics['precision_weighted'].append(val_metrics['precision'])
         metrics['precision_illicit'].append(val_metrics['precision_illicit'])
@@ -101,28 +100,33 @@ def update_best_weights(model, best_f1, current_f1, best_f1_model_wts):
 
 def train_and_test(
     model_wrapper,
-    data,
+    train_loader,
+    val_loader,
+    test_loader,
     num_epochs=200,
     patience=None,
     min_delta=0.0,
-    log_early_stop=False
+    log_early_stop=False,
+    **kwargs # Catch legacy arguments to prevent errors
 ):
     
-    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    # model_wrapper.model.to(device)
-    #data = data.to(device)
-    
-    
+    # 1. Train and Validate (using the train and val loaders)
     metrics, best_model_wts, best_f1 = train_and_validate(
         model_wrapper,
-        data,
-        num_epochs,
+        train_loader,
+        val_loader,
+        num_epochs=num_epochs,
         patience=patience,
         min_delta=min_delta,
         log_early_stop=log_early_stop
     )
     
+    # 2. Load the best weights found during validation
     model_wrapper.model.load_state_dict(best_model_wts)
-    test_loss, test_metrics = model_wrapper.evaluate(data, data.test_perf_eval_mask)
+    
+    # 3. Test the model using the test_loader
+    # This calls the updated evaluate() method in ModelWrapper which iterates over the loader
+    test_loss, test_metrics = model_wrapper.evaluate(test_loader)
     
     return test_metrics, best_f1
+
