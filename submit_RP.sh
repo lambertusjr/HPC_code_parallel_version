@@ -31,6 +31,7 @@ cleanup() {
     --include '/optimization_results.db' \
     --include '/output.out' \
     --include '/worker*.log' \
+    --include '/debug_fail.log' \
     --exclude '*' \
     "${TMP}/" "${PBS_O_WORKDIR}/" || true
   [ "$?" -eq 0 ] && /bin/rm -rf "${TMP}"
