@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
-#PBS -l select=1:ncpus=32:mem=128GB:ngpus=3:Qlist=ee:host=comp056
-#PBS -l walltime=200:00:00
+#PBS -l select=1:ncpus=8:mem=64GB:ngpus=1:Qlist=ee:host=comp056
+#PBS -l walltime=24:00:00
 #PBS -j oe
 #PBS -o output.out
 #PBS -m ae
@@ -48,7 +48,7 @@ source "${TMP}/RP_env/bin/activate"
 command -v conda-unpack >/dev/null 2>&1 && conda-unpack || true
 set -u
 
-# threads consistent with ncpus=1
+# threads consistent with ncpus=8
 export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
 export QT_QPA_PLATFORM=offscreen
@@ -57,16 +57,20 @@ mkdir -p "${MPLCONFIGDIR}"
 
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
+# Get dataset from first argument
+if [ -z "${1:-}" ]; then
+    echo "ERROR: No dataset argument provided."
+    echo "Usage: qsub -F \"DATASET_NAME\" submit_RP.sh"
+    exit 1
+fi
+DATASET_NAME="$1"
+
 if [[ -f train.py ]]; then
-  echo "Starting Worker 0 on GPU 0 (HiMedium)"
-  # Run in background with & and redirect output
-  CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_HiMedium > "worker0_HiMedium.log" 2>&1 &
+  echo "Starting Training on GPU 0 for dataset: $DATASET_NAME"
   
-  echo "Starting Worker 1 on GPU 1 (LiMedium)"
-  CUDA_VISIBLE_DEVICES=1 python -u train.py IBM_AML_LiMedium > "worker1_LiMedium.log" 2>&1 &
+  # Run directly in foreground (no need for background & wait for single job)
+  CUDA_VISIBLE_DEVICES=0 python -u train.py "$DATASET_NAME" > "worker_${DATASET_NAME}.log" 2>&1
   
-  # Wait for all background jobs to finish before cleanup
-  wait
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
 fi
