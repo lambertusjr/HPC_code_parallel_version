@@ -137,29 +137,29 @@ model_parameters, testing_results = run_optimization(
 
 save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")
 # %% Importing optuna trials from HPC runs to local PC
-import optuna
-# 1. Define your database paths (URLs)
-# Note: Use absolute paths if the files are in different folders
-pc_storage = "sqlite:///optimization_results.db"
-cluster_storage = "sqlite:////Users/lambertusvanzyl/Downloads/HPC_completed_run/optimization_results_HPC.db" # /Users/lambertusvanzyl/Downloads/HPC_completed_run/optimization_results_HPC.db
+# import optuna
+# # 1. Define your database paths (URLs)
+# # Note: Use absolute paths if the files are in different folders
+# pc_storage = "sqlite:///optimization_results.db"
+# cluster_storage = "sqlite:////Users/lambertusvanzyl/Downloads/HPC_completed_run/optimization_results_HPC.db" # /Users/lambertusvanzyl/Downloads/HPC_completed_run/optimization_results_HPC.db
 
-hpc_studies = optuna.get_all_study_summaries(storage=cluster_storage)
+# hpc_studies = optuna.get_all_study_summaries(storage=cluster_storage)
 
-for study_summary in hpc_studies:
-    study_name = study_summary.study_name
-    print(f"Merging study: {study_name}...")
+# for study_summary in hpc_studies:
+#     study_name = study_summary.study_name
+#     print(f"Merging study: {study_name}...")
     
-    # 3. Copy each study from HPC file to Master file
-    # If the study name already exists in Master, trials are appended.
-    # If it doesn't exist, it is created.
-    optuna.copy_study(
-        from_study_name=study_name,
-        from_storage=cluster_storage,
-        to_storage=pc_storage,
-        to_study_name=study_name
-    )
+#     # 3. Copy each study from HPC file to Master file
+#     # If the study name already exists in Master, trials are appended.
+#     # If it doesn't exist, it is created.
+#     optuna.copy_study(
+#         from_study_name=study_name,
+#         from_storage=cluster_storage,
+#         to_storage=pc_storage,
+#         to_study_name=study_name
+#     )
 
-print("Migration complete. All HPC trials are now in your Master database.")
+# print("Migration complete. All HPC trials are now in your Master database.")
 
 
 
