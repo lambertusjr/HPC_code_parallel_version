@@ -59,9 +59,9 @@ python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(
 
 if [[ -f train.py ]]; then
   echo "Starting Training on GPU 0"
-  
+  dataset_name="IBM_AML_HiMedium"
   # Run directly in foreground, outputting to stdout (captured by PBS -j oe)
-  CUDA_VISIBLE_DEVICES=0 python -u train.py "IBM_AML_HiMedium"
+  CUDA_VISIBLE_DEVICES=0 python -u train.py "$dataset_name" 
   
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
