@@ -58,12 +58,17 @@ mkdir -p "${MPLCONFIGDIR}"
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 # Get dataset from first argument
-if [ -z "${1:-}" ]; then
+# Get dataset from environment variable (preferred for qsub -v) or first argument
+if [ -n "${DATASET_NAME:-}" ]; then
+    echo "Using DATASET_NAME from environment: ${DATASET_NAME}"
+elif [ -n "${1:-}" ]; then
+    DATASET_NAME="$1"
+    echo "Using DATASET_NAME from command line argument: ${DATASET_NAME}"
+else
     echo "ERROR: No dataset argument provided."
-    echo "Usage: qsub -F \"DATASET_NAME\" submit_RP.sh"
+    echo "Usage: qsub -v DATASET_NAME=\"dataset_name\" submit_RP.sh"
     exit 1
 fi
-DATASET_NAME="$1"
 
 if [[ -f train.py ]]; then
   echo "Starting Training on GPU 0 for dataset: $DATASET_NAME"
