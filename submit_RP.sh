@@ -74,7 +74,8 @@ if [[ -f train.py ]]; then
   echo "Starting Training on GPU 0 for dataset: $DATASET_NAME"
   
   # Run directly in foreground (no need for background & wait for single job)
-  CUDA_VISIBLE_DEVICES=0 python -u train.py "$DATASET_NAME" > "worker_${DATASET_NAME}.log" 2>&1
+  # Use tee to write to log file AND stdout so standard PBS logs capture it too
+  CUDA_VISIBLE_DEVICES=0 python -u train.py "$DATASET_NAME" 2>&1 | tee "worker_${DATASET_NAME}.log"
   
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
