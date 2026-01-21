@@ -57,25 +57,11 @@ mkdir -p "${MPLCONFIGDIR}"
 
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
-# Get dataset from first argument
-# Get dataset from environment variable (preferred for qsub -v) or first argument
-if [ -n "${DATASET_NAME:-}" ]; then
-    echo "Using DATASET_NAME from environment: ${DATASET_NAME}"
-elif [ -n "${1:-}" ]; then
-    DATASET_NAME="$1"
-    echo "Using DATASET_NAME from command line argument: ${DATASET_NAME}"
-else
-    echo "ERROR: No dataset argument provided."
-    echo "Usage: qsub -v DATASET_NAME=\"dataset_name\" submit_RP.sh"
-    exit 1
-fi
-
 if [[ -f train.py ]]; then
-  echo "Starting Training on GPU 0 for dataset: $DATASET_NAME"
+  echo "Starting Training on GPU 0"
   
-  # Run directly in foreground (no need for background & wait for single job)
-  # Use tee to write to log file AND stdout so standard PBS logs capture it too
-  CUDA_VISIBLE_DEVICES=0 python -u train.py "$DATASET_NAME" 2>&1 | tee "worker_${DATASET_NAME}.log"
+  # Run directly in foreground, outputting to stdout (captured by PBS -j oe)
+  CUDA_VISIBLE_DEVICES=0 python -u train.py "IBM_AML_HiMedium"
   
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
