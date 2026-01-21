@@ -58,11 +58,12 @@ mkdir -p "${MPLCONFIGDIR}"
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 if [[ -f train.py ]]; then
-  echo "Starting Training on GPU 0"
-  dataset_name="IBM_AML_HiMedium"
-  # Run directly in foreground, outputting to stdout (captured by PBS -j oe)
-  CUDA_VISIBLE_DEVICES=0 python -u train.py "$dataset_name" 
+  echo "Starting Worker 0 on GPU 0 (HiMedium)"
+  # Run in background with & and redirect output
+  CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_HiMedium 
   
+  # Wait for all background jobs to finish before cleanup
+  wait
 else
   echo "ERROR: missing training script"; ls -lah; exit 2
 fi
