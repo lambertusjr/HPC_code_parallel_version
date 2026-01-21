@@ -10,10 +10,6 @@
 
 set -euxo pipefail
 
-# Redirect stdout/stderr to a file in the submission dir to debug startup crashes
-# This bypasses PBS spooling so you can see it immediately
-exec > "${PBS_O_WORKDIR}/debug_fail.log" 2>&1
-
 umask 0077
 SCRATCH_BASE="/scratch-small-local"
 [ -d "${SCRATCH_BASE}" ] || SCRATCH_BASE="$HOME/scratch"
@@ -31,7 +27,6 @@ cleanup() {
     --include '/optimization_results.db' \
     --include '/output.out' \
     --include '/worker*.log' \
-    --include '/debug_fail.log' \
     --exclude '*' \
     "${TMP}/" "${PBS_O_WORKDIR}/" || true
   [ "$?" -eq 0 ] && /bin/rm -rf "${TMP}"
