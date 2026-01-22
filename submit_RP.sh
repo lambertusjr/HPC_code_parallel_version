@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
-#PBS -l select=1:ncpus=8:mem=128GB:ngpus=1:Qlist=ee:host=comp055
-#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=4:mem=32GB:ngpus=1:Qlist=ee:host=comp056
+#PBS -l walltime=50:00:00
 #PBS -j oe
 #PBS -o output.out
 #PBS -m ae
@@ -48,7 +48,7 @@ source "${TMP}/RP_env/bin/activate"
 command -v conda-unpack >/dev/null 2>&1 && conda-unpack || true
 set -u
 
-# threads consistent with ncpus=8
+# threads consistent with ncpus=1
 export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
 export QT_QPA_PLATFORM=offscreen
