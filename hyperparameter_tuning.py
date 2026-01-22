@@ -205,6 +205,30 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
         study_name = f'{model_name}_optimization on {data_for_optimization} dataset'
         db_path = 'sqlite:///optimization_results.db'
 
+        # --- Find Optimal Batch Size ---
+        optimal_batch_size = 4096
+        wrapper_models = ['MLP', 'GCN', 'GAT', 'GIN']
+        if model_name in wrapper_models:
+            print(f"Finding optimal batch size for {model_name}...")
+            
+            # Create a dummy builder that mimics what _get_model_instance does,
+            # but with fixed "safe" or "middle" hyperparameters just for memory sizing.
+            def model_builder_for_size_check():
+                class MockTrial:
+                    def suggest_int(self, name, low, high, step=None): return high
+                    def suggest_float(self, name, low, high, log=False): return low
+                    def suggest_categorical(self, name, choices): return choices[0]
+                
+                return _get_model_instance(MockTrial(), model_name, data, device)
+
+            optimal_batch_size = find_optimal_batch_size(
+                model_builder_for_size_check,
+                data,
+                device,
+                train_mask
+            )
+
+        
         if check_study_existence(model_name, data_for_optimization): 
             study = optuna.load_study(study_name=study_name, storage=db_path)
         else:
@@ -214,28 +238,7 @@ def run_optimization(models, data, train_perf_eval, val_perf_eval, test_perf_eva
                 storage=db_path,
                 load_if_exists=True
             )
-            # --- Find Optimal Batch Size ---
-            optimal_batch_size = 4096
-            wrapper_models = ['MLP', 'GCN', 'GAT', 'GIN']
-            if model_name in wrapper_models:
-                print(f"Finding optimal batch size for {model_name}...")
-                
-                # Create a dummy builder that mimics what _get_model_instance does,
-                # but with fixed "safe" or "middle" hyperparameters just for memory sizing.
-                def model_builder_for_size_check():
-                    class MockTrial:
-                        def suggest_int(self, name, low, high, step=None): return high
-                        def suggest_float(self, name, low, high, log=False): return low
-                        def suggest_categorical(self, name, choices): return choices[0]
-                    
-                    return _get_model_instance(MockTrial(), model_name, data, device)
 
-                optimal_batch_size = find_optimal_batch_size(
-                    model_builder_for_size_check,
-                    data,
-                    device,
-                    train_mask
-                )
 
             with tqdm(total=n_trials, desc=f"{model_name} trials", leave=False, unit="trial") as trial_bar:
                 def _optuna_progress_callback(study, trial):
