@@ -1,4 +1,3 @@
-New submit_RP.sh code that doesn’t work
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
 #PBS -l select=1:ncpus=8:mem=128GB:ngpus=1:Qlist=ee:host=comp055
