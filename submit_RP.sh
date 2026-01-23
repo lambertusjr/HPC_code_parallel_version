@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N Fraud_GNN_IBM_Medium
-#PBS -l select=1:ncpus=8:mem=128GB:ngpus=1:Qlist=ee:host=comp055
-#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=4:mem=64GB:ngpus=1:Qlist=ee:host=comp055
+#PBS -l walltime=80:00:00
 #PBS -j oe
 #PBS -o output.out
 #PBS -m ae
@@ -60,7 +60,7 @@ python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(
 if [[ -f train.py ]]; then
   echo "Starting Worker 0 on GPU 0 (HiMedium)"
   # Run in background with & and redirect output
-  CUDA_VISIBLE_DEVICES=0 python -u train.py IBM_AML_LiMedium 
+  python -u train.py IBM_AML_LiMedium 
   
   # Wait for all background jobs to finish before cleanup
   wait

@@ -13,6 +13,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import pickle
 
 import torch
 import torch.nn as nn
@@ -120,9 +121,11 @@ match dataset_name:
 # transform = T.ToSparseTensor(remove_edge_index=True)
 # data = transform(data)
 
-def save_testing_results_csv(results, path=f"{data_for_optimization}_testing_results.csv"):
-    df = pd.DataFrame(results)
-    df.to_csv(f"csv_results/{data_for_optimization}_testing_results.csv", index=False)
+def save_testing_results_pkl(results, path=f"{data_for_optimization}_testing_results.pkl"):
+    if not os.path.exists("csv_results"):
+        os.makedirs("csv_results")
+    with open(f"csv_results/{path}", "wb") as f:
+        pickle.dump(results, f)
 
 model_parameters, testing_results = run_optimization(
     models=['MLP', 'SVM', 'XGB', 'RF', 'GCN', 'GAT', 'GIN'],
@@ -135,7 +138,7 @@ model_parameters, testing_results = run_optimization(
     data_for_optimization=data_for_optimization
 )
 
-save_testing_results_csv(testing_results, path=f"{data_for_optimization}_testing_results.csv")
+save_testing_results_pkl(testing_results, path=f"{data_for_optimization}_testing_results.pkl")
 # %% Importing optuna trials from HPC runs to local PC
 # import optuna
 # # 1. Define your database paths (URLs)
