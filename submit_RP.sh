@@ -60,7 +60,7 @@ python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(
 if [[ -f train.py ]]; then
   echo "Starting Worker 0 on GPU 0 (HiMedium)"
   # Run in background with & and redirect output
-  python -u train.py IBM_AML_LiMedium 
+  python -u train.py IBM_AML_HiMedium 
   
   # Wait for all background jobs to finish before cleanup
   wait
