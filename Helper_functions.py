@@ -459,9 +459,9 @@ def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbo
     """
     print("Searching for optimal batch size...")
     
-    low = 2048
-    high = 500000 # Start with a reasonable upper bound
-    optimal = 4096 # Safe default
+    low = 32768
+    high = 1000000 # Start with a reasonable upper bound
+    optimal = 65536 # Safe default
     
     # Define a simple training loop for testing
     def test_batch_size(batch_size):
@@ -534,7 +534,7 @@ def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbo
     # 2. Binary search between max_safe and high (which failed)
     low = max_safe
     
-    while low < high - 256: # Granularity of 256
+    while low < high - 512: # Granularity of 512
         mid = (low + high) // 2
         print(f"Binary search testing: {mid}")
         if test_batch_size(mid):
@@ -542,7 +542,7 @@ def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbo
         else:
             high = mid
             
-    # Return 90% of the max found size to be safe
-    optimal = int(low * 0.9)
+    # Return 95% of the max found size to be safe
+    optimal = int(low * 0.95)
     print(f"Optimal batch size found: {optimal}")
     return optimal
