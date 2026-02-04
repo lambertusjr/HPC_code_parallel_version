@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N IBM_HM
-#PBS -l select=1:ncpus=8:mem=64GB:ngpus=1:Qlist=ee:host=comp056
+#PBS -l select=1:ncpus=8:mem=64GB:ngpus=1:Qlist=ee:host=comp055
 #PBS -q ee
 #PBS -l walltime=300:00:00
 #PBS -j oe
