@@ -460,7 +460,7 @@ def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbo
     print("Searching for optimal batch size...")
     
     low = 32768
-    high = 1000000 # Start with a reasonable upper bound
+    high = 5000000 # Start with a reasonable upper bound
     optimal = 65536 # Safe default
     
     # Define a simple training loop for testing
