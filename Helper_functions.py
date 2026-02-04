@@ -542,7 +542,7 @@ def find_optimal_batch_size(model_builder, data, device, train_mask, num_neighbo
         else:
             high = mid
             
-    # Return 95% of the max found size to be safe
-    optimal = int(low * 0.95)
+    # Return 90% of the max found size to be safe
+    optimal = int(low * 0.90)
     print(f"Optimal batch size found: {optimal}")
     return optimal
