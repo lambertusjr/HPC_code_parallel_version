@@ -61,7 +61,7 @@ export CUDA_VISIBLE_DEVICES=1
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 if [[ -f train.py ]]; then
-  echo "Starting Worker 0 on GPU 0 (HiMedium)"
+  echo "Starting Worker 0 on GPU 1 (HiMedium)"
   # Run in background with & and redirect output
   python -u train.py IBM_AML_HiMedium 
   
