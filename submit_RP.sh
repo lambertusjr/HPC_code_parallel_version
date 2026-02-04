@@ -56,6 +56,8 @@ export QT_QPA_PLATFORM=offscreen
 export MPLCONFIGDIR="${TMP}/.mpl"
 mkdir -p "${MPLCONFIGDIR}"
 
+export CUDA_VISIBLE_DEVICES=1
+
 python -c "import torch, sys; print('torch', torch.__version__, 'cuda', getattr(torch.version,'cuda',None), 'cuda_available', torch.cuda.is_available())"
 
 if [[ -f train.py ]]; then
