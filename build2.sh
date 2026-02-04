@@ -32,7 +32,6 @@ RP_PIP="$TMP/RP_env/bin/pip"
 
 echo ">>> Installing PyG binaries from $PYG_WHEEL_URL"
 $RP_PIP install torch_geometric
-$RP_PIP install pyg_lib -f $PYG_WHEEL_URL 
 
 # Note: We explicitly DO NOT install pyg_lib if it causes GLIBC issues.
 # torch-sparse is sufficient for NeighborSampler.
